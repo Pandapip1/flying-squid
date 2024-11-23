@@ -181,6 +181,15 @@ module.exports.player = function (player, serv, settings) {
       z: chunkZ,
       chunk: column
     }, ({ x, z, chunk }) => {
+      /*
+         Returning undefined for **sectionMask** as done in the **getMask** method of Prismarine-Chunk 1.18
+     */
+
+      let mask
+      if (typeof column.sectionMask == 'object') {
+        mask = chunk.getMask()
+      }
+    
       player._client.write('map_chunk', {
         x,
         z,
@@ -198,6 +207,12 @@ module.exports.player = function (player, serv, settings) {
         chunkData: chunk.dump(),
         blockEntities: []
       })
+
+      /*
+        Temporary fix for dumpLings
+      */
+      if (typeof chunk.skyLightMask == 'object') return Promise.resolve()
+    
       if (registry.supportFeature('dimensionDataIsAvailable')) {
         player._client.write('update_light', {
           chunkX: x,
@@ -248,7 +263,12 @@ module.exports.player = function (player, serv, settings) {
       .reduce((acc, { chunkX, chunkZ }) => {
         const p = acc
           .then(() => player.world.getColumn(chunkX, chunkZ))
-          .then((column) => player.sendChunk(chunkX, chunkZ, column))
+          .then((column) => {
+            /*
+              Temporary fix for dumpLings
+            */
+            if (typeof column.skyLightMask == 'object') return player.sendChunk(chunkX, chunkZ, column)
+          })
         return group ? p.then(() => sleep(5)) : p
       }
       , Promise.resolve())
